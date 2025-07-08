@@ -1,0 +1,148 @@
+{
+  "name": "copilot-mini",
+  "displayName": "CopilotMini",
+  "description": "AI-powered code completion with fine-tuned models and RAG enhancement",
+  "version": "0.1.0",
+  "publisher": "copilot-mini",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/copilot-mini.git"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "copilot",
+    "autocomplete",
+    "code-generation",
+    "programming-assistant"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "copilotMini.enable",
+        "title": "Enable CopilotMini",
+        "category": "CopilotMini"
+      },
+      {
+        "command": "copilotMini.disable",
+        "title": "Disable CopilotMini",
+        "category": "CopilotMini"
+      },
+      {
+        "command": "copilotMini.openChat",
+        "title": "Open Chat Panel",
+        "category": "CopilotMini"
+      },
+      {
+        "command": "copilotMini.explainCode",
+        "title": "Explain Selected Code",
+        "category": "CopilotMini"
+      },
+      {
+        "command": "copilotMini.fixError",
+        "title": "Fix Error",
+        "category": "CopilotMini"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "copilotMini.openChat",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c"
+      },
+      {
+        "command": "copilotMini.explainCode",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e"
+      }
+    ],
+    "configuration": {
+      "title": "CopilotMini",
+      "properties": {
+        "copilotMini.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable CopilotMini suggestions"
+        },
+        "copilotMini.serverUrl": {
+          "type": "string",
+          "default": "ws://localhost:8000",
+          "description": "Backend server URL"
+        },
+        "copilotMini.maxSuggestions": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum number of suggestions to show"
+        },
+        "copilotMini.suggestionDelay": {
+          "type": "number",
+          "default": 300,
+          "description": "Delay in milliseconds before showing suggestions"
+        },
+        "copilotMini.enableChat": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable chat mode"
+        },
+        "copilotMini.enableErrorFix": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic error fixing suggestions"
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "copilotMiniChat",
+          "name": "CopilotMini Chat",
+          "when": "copilotMini.chatEnabled"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "copilotMini",
+          "title": "CopilotMini",
+          "icon": "$(robot)"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
+    "eslint": "^8.47.0",
+    "typescript": "^5.1.6",
+    "@vscode/test-electron": "^2.3.4",
+    "@vscode/vsce": "^2.19.0"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "axios": "^1.6.0"
+  }
+} 

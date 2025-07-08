@@ -1,0 +1,23 @@
+# Minimal requirements for initial development
+# Core Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+
+# Basic ML (smaller footprint)
+numpy>=1.24.0
+pandas>=2.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Development & Testing
+tqdm>=4.66.0
+click>=8.1.0
+loguru>=0.7.2
+pytest>=7.4.0
+
+# Code Processing (essential)
+pygments>=2.16.0
+
+# Note: Run this first with: pip install -r requirements-minimal.txt
+# Then gradually add larger dependencies as needed 

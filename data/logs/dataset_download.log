@@ -1,0 +1,5 @@
+2025-07-07 18:03:01.629 | INFO     | __main__:create_sample_dataset:191 - Creating sample dataset...
+2025-07-07 18:03:01.630 | INFO     | __main__:create_sample_dataset:278 - Created sample dataset: /Users/satviknayak/work/projects/CopilotMini/data/raw/sample_python.jsonl
+2025-07-07 18:03:01.630 | INFO     | __main__:create_sample_dataset:278 - Created sample dataset: /Users/satviknayak/work/projects/CopilotMini/data/raw/sample_javascript.jsonl
+2025-07-07 18:03:01.630 | INFO     | __main__:main:331 - Download complete! Total files: 2
+2025-07-07 18:03:01.630 | INFO     | __main__:main:339 - sample_dataset: 2 files downloaded
