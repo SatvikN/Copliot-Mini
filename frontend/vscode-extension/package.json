@@ -99,6 +99,21 @@
           "type": "boolean",
           "default": true,
           "description": "Enable automatic error fixing suggestions"
+        },
+        "copilotMini.enableHoverTips": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show helpful tips when hovering over errors"
+        },
+        "copilotMini.autoAnalyzeCode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically analyze code for potential improvements"
+        },
+        "copilotMini.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug logging for troubleshooting"
         }
       }
     },
