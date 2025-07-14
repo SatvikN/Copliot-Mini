@@ -1,0 +1,364 @@
+# CodeGen Fine-tuning Configuration
+# Optimized settings for CodeGen model training
+
+model:
+  name: "Salesforce/codegen-350M-mono"
+  type: "causal_lm"
+  tokenizer: "Salesforce/codegen-350M-mono"
+  
+  # Model-specific settings
+  max_position_embeddings: 2048
+  vocab_size: 51200
+  context_length: 1024
+  
+  # CodeGen-specific settings
+  n_embd: 1024
+  n_layer: 20
+  n_head: 16
+  rotary_dim: 32
+  
+  # Special tokens
+  special_tokens:
+    pad_token: "<|pad|>"
+    eos_token: "<|endoftext|>"
+    bos_token: "<|startoftext|>"
+    unk_token: "<|unk|>"
+  
+  # Code-specific tokens
+  code_tokens:
+    - "<|code|>"
+    - "<|comment|>"
+    - "<|function|>"
+    - "<|class|>"
+    - "<|variable|>"
+    - "<|import|>"
+    - "<|return|>"
+    - "<|if|>"
+    - "<|for|>"
+    - "<|while|>"
+
+# Training parameters (optimized for CodeGen)
+training:
+  # Basic settings
+  num_epochs: 3
+  batch_size: 4  # Smaller due to larger model
+  eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  
+  # Optimization
+  learning_rate: 2.5e-5  # Lower LR for larger model
+  weight_decay: 0.01
+  warmup_steps: 1000
+  max_grad_norm: 1.0
+  
+  # Adam optimizer settings
+  adam_epsilon: 1e-8
+  adam_beta1: 0.9
+  adam_beta2: 0.95  # Different beta2 for code generation
+  
+  # Learning rate scheduling
+  lr_scheduler_type: "cosine_with_restarts"
+  warmup_ratio: 0.05
+  num_cycles: 1
+  
+  # Evaluation and saving
+  eval_steps: 1000  # Less frequent due to slower training
+  save_steps: 2000
+  logging_steps: 50
+  save_total_limit: 5
+  
+  # Performance optimization
+  fp16: true
+  dataloader_pin_memory: true
+  dataloader_num_workers: 2
+  remove_unused_columns: false
+  gradient_checkpointing: true  # Important for memory
+  
+  # CodeGen-specific optimizations
+  use_memory_efficient_attention: true
+  attention_implementation: "flash_attention_2"
+  
+  # Early stopping
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+  early_stopping_patience: 2  # Reduced patience for large model
+
+# Dataset configuration
+dataset:
+  # Paths
+  processed_data_path: "data/processed/processed_dataset_codegen"
+  train_split: "train"
+  validation_split: "validation"
+  test_split: "test"
+  
+  # Data processing
+  max_length: 1024  # Larger context for CodeGen
+  truncation: true
+  padding: "max_length"
+  
+  # Data collator
+  mlm: false  # Causal LM
+  pad_to_multiple_of: 8
+  
+  # CodeGen-specific data settings
+  pack_sequences: true  # Pack multiple examples together
+  packing_max_length: 1024
+  include_file_separators: true
+
+# Generation settings (optimized for code)
+generation:
+  max_length: 200
+  max_new_tokens: 128
+  min_length: 10
+  temperature: 0.6
+  top_p: 0.9
+  top_k: 40
+  repetition_penalty: 1.05
+  length_penalty: 1.0
+  no_repeat_ngram_size: 3
+  do_sample: true
+  num_return_sequences: 3
+  
+  # CodeGen-specific generation
+  use_cache: true
+  return_dict_in_generate: true
+  output_scores: true
+  
+  # Stop tokens for code generation
+  stop_sequences:
+    - "\n\n\n"
+    - "</s>"
+    - "<|endoftext|>"
+  
+  # Prevent certain patterns
+  bad_words_ids: []  # Add problematic token IDs here
+
+# Hardware and environment
+hardware:
+  # Device settings
+  device: "auto"
+  mixed_precision: true
+  gradient_checkpointing: true
+  
+  # Memory optimization
+  max_memory_usage: 0.9
+  cpu_offload: false
+  
+  # Distributed training
+  use_deepspeed: true
+  deepspeed_config: "training/configs/deepspeed_config.json"
+  
+  # CodeGen-specific optimizations
+  use_8bit_adam: false
+  use_bnb_optimizer: false
+
+# Logging and monitoring
+logging:
+  # Weights & Biases
+  use_wandb: false
+  wandb_project: "copilot-mini"
+  wandb_entity: null
+  wandb_run_name: "codegen-finetune"
+  
+  # TensorBoard
+  use_tensorboard: true
+  tensorboard_log_dir: "training/logs/tensorboard"
+  
+  # File logging
+  log_file: "training/logs/codegen_training.log"
+  log_level: "INFO"
+  
+  # Metrics to track
+  metrics:
+    - "loss"
+    - "eval_loss"
+    - "perplexity"
+    - "accuracy"
+    - "learning_rate"
+    - "epoch"
+    - "gpu_memory_usage"
+
+# Checkpointing
+checkpointing:
+  output_dir: "training/checkpoints/codegen"
+  overwrite_output_dir: true
+  resume_from_checkpoint: null
+  
+  # Checkpoint management
+  save_strategy: "steps"
+  evaluation_strategy: "steps"
+  
+  # Checkpoint optimization
+  save_safetensors: true
+  save_on_each_node: false
+  
+  # Final model
+  push_to_hub: false
+  hub_model_id: null
+  hub_strategy: "every_save"
+
+# Data quality and filtering
+data_quality:
+  # Code quality filters
+  min_lines: 5
+  max_lines: 200
+  min_chars: 100
+  max_chars: 4096
+  
+  # Language detection
+  supported_languages:
+    - "python"
+    - "javascript"
+    - "typescript"
+    - "java"
+    - "cpp"
+    - "c"
+    - "go"
+    - "rust"
+    - "php"
+    - "ruby"
+    - "html"
+    - "css"
+    - "sql"
+  
+  # Quality scoring
+  quality_threshold: 0.4
+  remove_duplicates: true
+  remove_low_quality: true
+  
+  # Code-specific filters
+  has_syntax_elements: true
+  min_complexity_score: 2
+  max_repetition_ratio: 0.3
+  filter_generated_code: true
+
+# Evaluation settings
+evaluation:
+  # Metrics to compute
+  compute_metrics: true
+  prediction_loss_only: false
+  
+  # Code generation evaluation
+  eval_generation: true
+  eval_prompts:
+    - "def merge_sort(arr):"
+    - "class BinaryTree:"
+    - "import tensorflow as tf"
+    - "async def fetch_data(url):"
+    - "with open('config.json', 'r') as f:"
+    - "# Implement quicksort algorithm"
+    - "def calculate_fibonacci(n):"
+    - "class RestAPIClient:"
+  
+  # Code quality evaluation
+  eval_code_quality: true
+  quality_metrics:
+    - "syntax_correctness"
+    - "semantic_coherence"
+    - "complexity_score"
+    - "documentation_coverage"
+  
+  # Performance benchmarks
+  benchmark_datasets:
+    - "humaneval"
+    - "mbpp"
+    - "apps"
+  
+  # Custom evaluation
+  custom_eval_script: "training/scripts/evaluate_codegen.py"
+
+# Model architecture modifications
+architecture:
+  # Attention modifications
+  attention_dropout: 0.1
+  residual_dropout: 0.1
+  embedding_dropout: 0.1
+  
+  # CodeGen-specific settings
+  use_cache: false  # Disable during training
+  gradient_checkpointing: true
+  
+  # Memory optimization
+  tie_word_embeddings: true
+  use_memory_efficient_attention: true
+  
+  # Advanced attention mechanisms
+  use_sliding_window_attention: false
+  sliding_window_size: 512
+
+# Code-specific features
+code_features:
+  # Syntax awareness
+  syntax_highlighting: true
+  indentation_aware: true
+  
+  # Code structure understanding
+  function_boundary_detection: true
+  class_boundary_detection: true
+  
+  # Language-specific optimizations
+  python_specific: true
+  javascript_specific: true
+  
+  # Code completion modes
+  line_completion: true
+  block_completion: true
+  function_completion: true
+
+# Experimental features
+experimental:
+  # Advanced techniques
+  use_lora: false
+  lora_rank: 32
+  lora_alpha: 64
+  lora_dropout: 0.1
+  lora_target_modules:
+    - "c_attn"
+    - "c_proj"
+    - "c_fc"
+  
+  # Quantization
+  use_8bit: false
+  use_4bit: false
+  load_in_8bit: false
+  load_in_4bit: false
+  
+  # Knowledge distillation
+  use_teacher_forcing: false
+  teacher_model: null
+  distillation_temperature: 4.0
+  distillation_alpha: 0.5
+  
+  # Curriculum learning
+  use_curriculum: false
+  curriculum_strategy: "complexity_based"
+  curriculum_schedule: "linear"
+  
+  # Advanced training techniques
+  use_gradient_clipping: true
+  use_weight_decay_schedule: false
+  use_cosine_annealing: false
+  
+  # Code-specific experiments
+  use_code_context_awareness: true
+  use_multi_file_context: false
+  use_repository_context: false
+
+# Performance monitoring
+performance:
+  # Memory monitoring
+  track_memory_usage: true
+  memory_warning_threshold: 0.9
+  
+  # Speed monitoring
+  track_training_speed: true
+  target_steps_per_second: 0.5
+  
+  # Quality monitoring
+  track_generation_quality: true
+  quality_check_frequency: 100
+  
+  # Early stopping based on performance
+  stop_on_memory_overflow: true
+  stop_on_slow_training: false 

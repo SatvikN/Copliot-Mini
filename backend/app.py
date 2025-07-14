@@ -25,6 +25,24 @@ from config import API_CONFIG, LOGGING_CONFIG
 from backend.models.inference import MockInferenceEngine
 from backend.utils.connection_manager import ConnectionManager
 
+# Import real AI engine
+try:
+    from backend.models.real_inference import RealInferenceEngine
+    REAL_AI_AVAILABLE = True
+except ImportError as e:
+    REAL_AI_AVAILABLE = False
+    RealInferenceEngine = None
+    logger.info(f"Real AI not available: {e}")
+
+# Import custom AI engine
+try:
+    from backend.models.custom_inference import CustomInferenceEngine
+    CUSTOM_AI_AVAILABLE = True
+except ImportError as e:
+    CUSTOM_AI_AVAILABLE = False
+    CustomInferenceEngine = None
+    logger.info(f"Custom AI not available: {e}")
+
 # Configure logging
 logger.add(
     LOGGING_CONFIG["log_file"], 
@@ -53,7 +71,26 @@ app.add_middleware(
 
 # Initialize components
 connection_manager = ConnectionManager()
-inference_engine = MockInferenceEngine()
+
+# Choose inference engine based on environment variables
+USE_REAL_AI = os.getenv("USE_REAL_AI", "false").lower() == "true"
+USE_CUSTOM_AI = os.getenv("USE_CUSTOM_AI", "false").lower() == "true"
+
+# Priority: Custom AI > Real AI > Mock
+if USE_CUSTOM_AI and CUSTOM_AI_AVAILABLE:
+    inference_engine = CustomInferenceEngine()
+    logger.info("🎯 Using Custom fine-tuned models")
+elif USE_REAL_AI and REAL_AI_AVAILABLE:
+    inference_engine = RealInferenceEngine()
+    logger.info("🤖 Using Real AI inference engine")
+else:
+    inference_engine = MockInferenceEngine()
+    if USE_CUSTOM_AI and not CUSTOM_AI_AVAILABLE:
+        logger.warning("⚠️ Custom AI requested but no trained models found, falling back to mock")
+    elif USE_REAL_AI and not REAL_AI_AVAILABLE:
+        logger.warning("⚠️ Real AI requested but not available, using mock engine")
+    else:
+        logger.info("🔧 Using Mock inference engine")
 
 # Pydantic models for request/response
 class CodeCompletionRequest(BaseModel):
@@ -173,6 +210,75 @@ async def get_stats():
         "model_info": inference_engine.get_model_info(),
         "uptime": "0 minutes"  # TODO: Implement uptime tracking
     }
+
+@app.get("/api/v1/engines/status")
+async def get_engines_status():
+    """Get status of all available inference engines."""
+    status = {
+        "current_engine": type(inference_engine).__name__,
+        "available_engines": {},
+        "environment": {
+            "USE_REAL_AI": USE_REAL_AI,
+            "USE_CUSTOM_AI": USE_CUSTOM_AI
+        }
+    }
+    
+    # Check mock engine (always available)
+    status["available_engines"]["mock"] = {
+        "available": True,
+        "status": "ready",
+        "description": "Mock inference engine for development"
+    }
+    
+    # Check real AI engine
+    if REAL_AI_AVAILABLE:
+        real_engine = RealInferenceEngine()
+        status["available_engines"]["real_ai"] = {
+            "available": True,
+            "status": real_engine.get_status(),
+            "description": "Real AI models (OpenAI, Ollama, HuggingFace)"
+        }
+    else:
+        status["available_engines"]["real_ai"] = {
+            "available": False,
+            "status": "not_available",
+            "description": "Real AI dependencies not installed"
+        }
+    
+    # Check custom AI engine
+    if CUSTOM_AI_AVAILABLE:
+        custom_engine = CustomInferenceEngine()
+        try:
+            custom_initialized = await custom_engine.initialize()
+            if custom_initialized:
+                model_info = custom_engine.get_model_info()
+                status["available_engines"]["custom_ai"] = {
+                    "available": True,
+                    "status": "ready",
+                    "description": f"Custom fine-tuned models ({model_info['total_models']} models available)",
+                    "models": model_info.get("models", [])
+                }
+                await custom_engine.cleanup()
+            else:
+                status["available_engines"]["custom_ai"] = {
+                    "available": False,
+                    "status": "no_models",
+                    "description": "No trained custom models found"
+                }
+        except Exception as e:
+            status["available_engines"]["custom_ai"] = {
+                "available": False,
+                "status": "error",
+                "description": f"Custom AI initialization failed: {str(e)}"
+            }
+    else:
+        status["available_engines"]["custom_ai"] = {
+            "available": False,
+            "status": "not_available",
+            "description": "Custom AI engine not available"
+        }
+    
+    return status
 
 # WebSocket endpoint for real-time communication
 @app.websocket("/ws")
