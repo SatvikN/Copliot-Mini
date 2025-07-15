@@ -1,0 +1,14 @@
+2025-07-14 19:12:25 | INFO | Training logs will be saved to: training/logs/codegen_training_20250714_191225.log
+2025-07-14 19:12:25 | INFO | Validating environment for codegen training...
+2025-07-14 19:12:25 | WARNING | ⚠️ No GPU available, training will be slow
+2025-07-14 19:12:25 | WARNING | ⚠️ Low disk space: 8.5GB available
+2025-07-14 19:12:25 | WARNING | ⚠️ Low system memory: 8.6GB
+2025-07-14 19:12:25 | INFO | ✅ Dataset found at: data/processed/processed_dataset_codegen
+2025-07-14 19:12:25 | INFO | Training started at: 2025-07-14 19:12:25.498443
+2025-07-14 19:12:25 | INFO | Starting CodeGen fine-tuning...
+2025-07-14 19:12:25 | INFO | Loading CodeGen model: Salesforce/codegen-350M-mono
+2025-07-14 19:12:28 | INFO | CodeGen model loaded with 354878593 parameters
+2025-07-14 19:12:28 | INFO | Loading dataset from: data/processed/processed_dataset_codegen
+2025-07-14 19:12:28 | ERROR | Failed to load dataset: Tried reading schema message, was null or length 0
+2025-07-14 19:12:28 | INFO | Creating a sample dataset for testing...
+2025-07-14 19:12:29 | INFO | Training started...

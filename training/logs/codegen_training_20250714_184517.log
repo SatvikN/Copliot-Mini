@@ -1,0 +1,26 @@
+2025-07-14 18:45:17 | INFO | Training logs will be saved to: training/logs/codegen_training_20250714_184517.log
+2025-07-14 18:45:17 | INFO | Validating environment for codegen training...
+2025-07-14 18:45:17 | WARNING | ⚠️ No GPU available, training will be slow
+2025-07-14 18:45:17 | WARNING | ⚠️ Low disk space: 6.4GB available
+2025-07-14 18:45:17 | WARNING | ⚠️ Low system memory: 8.6GB
+2025-07-14 18:45:17 | INFO | ✅ Dataset found at: data/processed/processed_dataset_codegen
+2025-07-14 18:45:17 | INFO | Training started at: 2025-07-14 18:45:17.342986
+2025-07-14 18:45:17 | INFO | Starting CodeGen fine-tuning...
+2025-07-14 18:45:17 | INFO | Loading CodeGen model: Salesforce/codegen-350M-mono
+2025-07-14 18:45:22 | INFO | CodeGen model loaded with 354878593 parameters
+2025-07-14 18:45:22 | INFO | Loading dataset from: data/processed/processed_dataset_codegen
+2025-07-14 18:45:22 | INFO | Dataset loaded: DatasetDict({
+    train: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 80
+    })
+    validation: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 10
+    })
+    test: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 10
+    })
+})
+2025-07-14 18:45:24 | INFO | Training started...

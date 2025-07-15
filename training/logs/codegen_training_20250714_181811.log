@@ -1,0 +1,65 @@
+2025-07-14 18:18:11 | INFO | Training logs will be saved to: training/logs/codegen_training_20250714_181811.log
+2025-07-14 18:18:11 | INFO | Validating environment for codegen training...
+2025-07-14 18:18:11 | WARNING | ⚠️ No GPU available, training will be slow
+2025-07-14 18:18:11 | WARNING | ⚠️ Low disk space: 3.0GB available
+2025-07-14 18:18:11 | WARNING | ⚠️ Low system memory: 8.6GB
+2025-07-14 18:18:11 | INFO | ✅ Dataset found at: data/processed/processed_dataset_codegen
+2025-07-14 18:18:11 | INFO | Training started at: 2025-07-14 18:18:11.515572
+2025-07-14 18:18:11 | INFO | Starting CodeGen fine-tuning...
+2025-07-14 18:18:11 | INFO | Loading CodeGen model: Salesforce/codegen-350M-mono
+2025-07-14 18:18:14 | INFO | CodeGen model loaded with 354878593 parameters
+2025-07-14 18:18:14 | INFO | Loading dataset from: data/processed/processed_dataset_codegen
+2025-07-14 18:18:14 | INFO | Dataset loaded: DatasetDict({
+    train: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 80
+    })
+    validation: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 10
+    })
+    test: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 10
+    })
+})
+2025-07-14 18:18:15 | INFO | Training started...
+2025-07-14 18:18:22 | ERROR | ❌ Training failed for codegen: Caught ValueError in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 767, in convert_to_tensors
+    tensor = as_tensor(value)
+             ^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 729, in as_tensor
+    return torch.tensor(value)
+           ^^^^^^^^^^^^^^^^^^^
+ValueError: too many dimensions 'str'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/torch/utils/data/_utils/worker.py", line 349, in _worker_loop
+    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 55, in fetch
+    return self.collate_fn(data)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/data/data_collator.py", line 46, in __call__
+    return self.torch_call(features)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/data/data_collator.py", line 1014, in torch_call
+    batch = pad_without_fast_tokenizer_warning(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/data/data_collator.py", line 67, in pad_without_fast_tokenizer_warning
+    padded = tokenizer.pad(*pad_args, **pad_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 3374, in pad
+    return BatchEncoding(batch_outputs, tensor_type=return_tensors)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 240, in __init__
+    self.convert_to_tensors(tensor_type=tensor_type, prepend_batch_axis=prepend_batch_axis)
+  File "/opt/anaconda3/envs/copilot-mini-env/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 783, in convert_to_tensors
+    raise ValueError(
+ValueError: Unable to create tensor, you should probably activate truncation and/or padding with 'padding=True' 'truncation=True' to have batched tensors with the same length. Perhaps your features (`text` in this case) have excessive nesting (inputs type `list` where type `int` is expected).
+
+2025-07-14 18:18:22 | INFO | ✅ Training results saved to: training/results/codegen_results_20250714_181822.json
+2025-07-14 18:18:22 | ERROR | Training failed. See logs for details.

@@ -193,15 +193,15 @@ class CodeGenTrainer:
             "logging_steps": TRAINING_CONFIG["logging_steps"],
             "save_steps": TRAINING_CONFIG["save_steps"],
             "eval_steps": TRAINING_CONFIG["eval_steps"],
-            "evaluation_strategy": "steps",
+            "eval_strategy": "steps",
             "save_strategy": "steps",
             "max_grad_norm": TRAINING_CONFIG["max_grad_norm"],
             "weight_decay": TRAINING_CONFIG["weight_decay"],
             "adam_epsilon": TRAINING_CONFIG["adam_epsilon"],
             "fp16": torch.cuda.is_available(),
             "dataloader_pin_memory": True,
-            "dataloader_num_workers": 2,
-            "remove_unused_columns": False,
+            "dataloader_num_workers": 0,
+            "remove_unused_columns": True,
             "load_best_model_at_end": True,
             "metric_for_best_model": "eval_loss",
             "greater_is_better": False,
@@ -257,6 +257,12 @@ class CodeGenTrainer:
         self.setup_model_and_tokenizer()
         self.load_dataset()
         
+        # Manually remove columns that are not needed for training
+        if self.dataset:
+            self.dataset = self.dataset.remove_columns(
+                [col for col in ["text", "language", "token_count", "truncated"] if col in self.dataset["train"].column_names]
+            )
+
         # Setup data collator
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=self.tokenizer,
@@ -482,6 +488,7 @@ def main():
     parser.add_argument("--interactive", action="store_true",
                        help="Start interactive completion session")
     
+    print("Check #0")
     args = parser.parse_args()
     
     # Setup logging
@@ -496,17 +503,22 @@ def main():
         output_dir=args.output_dir,
         resume_from_checkpoint=args.resume_from_checkpoint
     )
+
+    print("Check #1")
     
     if args.interactive:
+        print("Check #2")
         # Start interactive session
         trainer.setup_model_and_tokenizer()
         trainer.interactive_completion()
     elif args.eval_only:
+        print("Check #3")
         # Only run evaluation
         trainer.setup_model_and_tokenizer()
         trainer.load_dataset()
         trainer.evaluate()
     else:
+        print("Check #4")
         # Run training
         train_result = trainer.train(
             num_train_epochs=args.epochs,

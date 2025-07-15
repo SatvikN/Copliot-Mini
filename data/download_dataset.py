@@ -305,38 +305,46 @@ console.log(factorials);''',
         return results
 
 def main():
-    parser = argparse.ArgumentParser(description="Download code datasets for training")
-    parser.add_argument("--output-dir", type=str, help="Output directory for raw data")
-    parser.add_argument("--include-large", action="store_true", 
-                       help="Include large datasets (GitHub code, The Stack)")
-    parser.add_argument("--sample-only", action="store_true",
-                       help="Only create sample dataset for testing")
+    """Main entry point for the download script."""
     
-    args = parser.parse_args()
+    # --- Configuration Variables ---
+    # Change these variables to control which dataset is downloaded.
+    # Options: "code_search_net", "github_code", "the_stack", "sample"
+    DATASET_TO_DOWNLOAD = "the_stack"
     
+    # Set the maximum number of code samples to download.
+    MAX_SAMPLES = 5
+    # -----------------------------
+
     # Setup logging
-    logger.add("logs/dataset_download.log", rotation="10 MB")
-    
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    logger.add(log_dir / "download.log", rotation="10 MB")
+
     # Initialize downloader
-    output_dir = Path(args.output_dir) if args.output_dir else None
-    downloader = DatasetDownloader(output_dir)
+    downloader = DatasetDownloader()
+
+    if not DATASETS_AVAILABLE and DATASET_TO_DOWNLOAD != "sample":
+        logger.error("The 'datasets' library is required to download full datasets.")
+        logger.error("Please install it with: pip install datasets")
+        logger.info("Falling back to creating a sample dataset.")
+        downloader.create_sample_dataset()
+        return
+
+    # Execute download based on the configured dataset
+    logger.info(f"Starting download for dataset: '{DATASET_TO_DOWNLOAD}' with a limit of {MAX_SAMPLES} samples.")
     
-    if args.sample_only:
-        results = [downloader.create_sample_dataset()]
+    if DATASET_TO_DOWNLOAD == "sample":
+        downloader.create_sample_dataset()
+    elif DATASET_TO_DOWNLOAD == "code_search_net":
+        downloader.download_code_search_net()
+    elif DATASET_TO_DOWNLOAD == "github_code":
+        downloader.download_github_code(max_samples=MAX_SAMPLES)
+    elif DATASET_TO_DOWNLOAD == "the_stack":
+        downloader.download_stack_dataset(max_samples_per_lang=MAX_SAMPLES)
     else:
-        results = downloader.download_all(include_large=args.include_large)
-    
-    # Print summary
-    total_files = sum(len(r.get("files", [])) for r in results)
-    logger.info(f"Download complete! Total files: {total_files}")
-    
-    for result in results:
-        dataset_name = result["name"]
-        file_count = len(result.get("files", []))
-        if "error" in result:
-            logger.error(f"{dataset_name}: ERROR - {result['error']}")
-        else:
-            logger.info(f"{dataset_name}: {file_count} files downloaded")
+        logger.error(f"Unknown dataset specified: {DATASET_TO_DOWNLOAD}")
+
 
 if __name__ == "__main__":
     main() 

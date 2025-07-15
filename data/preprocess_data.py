@@ -498,23 +498,13 @@ class CodePreprocessor:
 
 def main():
     """Main function to run preprocessing."""
-    parser = argparse.ArgumentParser(description="CopilotMini Data Preprocessing")
-    parser.add_argument(
-        "--model", 
-        type=str, 
-        default="codegen",
-        choices=["codeparrot", "codet5", "codegen"],
-        help="Model type to preprocess data for."
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Limit the number of lines to process for a quick test."
-    )
-    args = parser.parse_args()
     
-    logger.info(f"Starting preprocessing for model: {args.model}")
+    # --- Configuration ---
+    MODEL_TYPE = "codegen"
+    PROCESS_LIMIT = None  # Set to None to process all data
+    # -------------------
+
+    logger.info(f"Starting preprocessing for model: {MODEL_TYPE}")
 
     # Setup directories
     raw_data_dir = Path(DATA_CONFIG["raw_data_dir"])
@@ -529,10 +519,10 @@ def main():
     preprocessor = CodePreprocessor(
         raw_data_dir=raw_data_dir,
         processed_data_dir=processed_data_dir,
-        model_name=args.model
+        model_name=MODEL_TYPE
     )
     
-    dataset = preprocessor.process_all_data(limit=args.limit)
+    dataset = preprocessor.process_all_data(limit=PROCESS_LIMIT)
     
     if dataset:
         logger.info("✅ Data preprocessing complete.")
