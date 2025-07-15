@@ -207,7 +207,7 @@ class CodeGenTrainer:
             "greater_is_better": False,
             "save_total_limit": 3,
             "report_to": "none",
-            "gradient_checkpointing": True,  # Enable for memory efficiency
+            "gradient_checkpointing": False,  # Disable for CPU stability
         }
         
         # Update with any provided kwargs
