@@ -397,178 +397,148 @@ class CodePreprocessor:
             "truncated": len(self.tokenizer.encode(formatted_code)) > max_length
         }
     
-    def process_jsonl_file(self, input_file: Path) -> List[Dict[str, Any]]:
-        """Process a single JSONL file."""
-        logger.info(f"Processing {input_file}")
-        
-        processed_examples = []
-        total_examples = 0
-        filtered_examples = 0
-        
-        with open(input_file, 'r', encoding='utf-8') as f:
-            for line in tqdm(f, desc=f"Processing {input_file.name}"):
-                total_examples += 1
-                
-                try:
-                    example = json.loads(line.strip())
-                    
-                    # Extract code content (different field names in different datasets)
-                    code = example.get('code') or example.get('content') or example.get('func_code_string', '')
-                    if not code:
-                        continue
-                    
-                    # Detect language
-                    filename = example.get('path', '') or example.get('file_name', '')
-                    language = self.detect_language(code, filename)
-                    
-                    # Filter code
-                    if not self.filter_code(code, language):
-                        filtered_examples += 1
-                        continue
-                    
-                    # Extract segments
-                    segments = self.extract_code_segments(code, language)
-                    
-                    for segment in segments:
-                        # Tokenize
-                        tokenized = self.tokenize_code(segment["code"])
-                        
-                        # Create processed example
-                        processed_example = {
-                            "id": f"{example.get('id', total_examples)}_{segment.get('name', 'main')}",
-                            "code": segment["code"],
-                            "language": language,
-                            "segment_type": segment["type"],
-                            "original_file": filename,
-                            "input_ids": tokenized["input_ids"],
-                            "attention_mask": tokenized["attention_mask"],
-                            "token_count": tokenized["token_count"],
-                            "truncated": tokenized["truncated"],
-                            "quality_metrics": self.assess_code_quality(segment["code"])
-                        }
-                        
-                        processed_examples.append(processed_example)
-                
-                except Exception as e:
-                    logger.debug(f"Error processing example: {e}")
-                    continue
-        
-        logger.info(f"Processed {len(processed_examples)} examples from {total_examples} total "
-                   f"(filtered {filtered_examples})")
-        
-        return processed_examples
-    
-    def create_training_splits(self, examples: List[Dict[str, Any]], 
-                             train_ratio: float = 0.8,
-                             val_ratio: float = 0.1) -> DatasetDict:
-        """Create train/validation/test splits."""
-        random.shuffle(examples)
-        
-        n_examples = len(examples)
-        n_train = int(n_examples * train_ratio)
-        n_val = int(n_examples * val_ratio)
-        
-        train_examples = examples[:n_train]
-        val_examples = examples[n_train:n_train + n_val]
-        test_examples = examples[n_train + n_val:]
-        
-        # Create datasets
-        dataset_dict = DatasetDict({
-            "train": Dataset.from_list(train_examples),
-            "validation": Dataset.from_list(val_examples),
-            "test": Dataset.from_list(test_examples)
-        })
-        
-        logger.info(f"Created splits: train={len(train_examples)}, "
-                   f"val={len(val_examples)}, test={len(test_examples)}")
-        
-        return dataset_dict
-    
-    def process_all_data(self) -> DatasetDict:
-        """Process all raw data files."""
-        logger.info("Starting data preprocessing...")
+    def process_jsonl_file(self, input_file: Path, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Process a single JSONL data file."""
+        logger.info(f"Processing file: {input_file}...")
         
         all_examples = []
         
-        # Find all JSONL files in raw data directory
-        jsonl_files = list(self.raw_data_dir.glob("*.jsonl"))
+        with open(input_file, 'r', encoding='utf-8') as f:
+            for i, line in tqdm(enumerate(f), desc=f"Parsing {input_file.name}"):
+                if limit and i >= limit:
+                    logger.info(f"Reached limit of {limit} lines for {input_file.name}.")
+                    break
+                try:
+                    row = json.loads(line)
+                    code = row.get("content") or row.get("code")
+                    
+                    if not code or not isinstance(code, str):
+                        continue
+                        
+                    language = self.detect_language(code, filename=row.get("path", ""))
+                    
+                    if self.filter_code(code, language):
+                        tokenized_code = self.tokenize_code(code)
+                        all_examples.append({
+                            "text": code,
+                            "language": language,
+                            **tokenized_code
+                        })
+                except json.JSONDecodeError:
+                    logger.warning(f"Skipping malformed JSON line in {input_file}")
+                except Exception as e:
+                    logger.warning(f"Error processing line: {e}")
+                    
+        return all_examples
         
-        if not jsonl_files:
-            logger.warning(f"No JSONL files found in {self.raw_data_dir}")
+    def create_training_splits(self, examples: List[Dict[str, Any]], 
+                             train_ratio: float = 0.8,
+                             val_ratio: float = 0.1) -> DatasetDict:
+        
+        # Shuffle data
+        random.shuffle(examples)
+        
+        # Split into train, validation, test
+        train_end = int(len(examples) * train_ratio)
+        val_end = train_end + int(len(examples) * val_ratio)
+        
+        train_examples = examples[:train_end]
+        val_examples = examples[train_end:val_end]
+        test_examples = examples[val_end:]
+        
+        logger.info(f"Train samples: {len(train_examples)}, Validation: {len(val_examples)}, Test: {len(test_examples)}")
+        
+        # Create Hugging Face Dataset objects
+        train_dataset = Dataset.from_pandas(pd.DataFrame(train_examples))
+        val_dataset = Dataset.from_pandas(pd.DataFrame(val_examples))
+        test_dataset = Dataset.from_pandas(pd.DataFrame(test_examples))
+        
+        return DatasetDict({
+            "train": train_dataset,
+            "validation": val_dataset,
+            "test": test_dataset
+        })
+        
+    def process_all_data(self, limit: Optional[int] = None) -> DatasetDict:
+        """Process all raw data files."""
+        logger.info("Starting data processing...")
+        
+        all_examples = []
+        files_to_process = list(self.raw_data_dir.rglob("*.jsonl"))
+        
+        if not files_to_process:
+            logger.warning(f"No .jsonl files found in {self.raw_data_dir}")
             return None
-        
-        # Process each file
-        for jsonl_file in jsonl_files:
-            examples = self.process_jsonl_file(jsonl_file)
+            
+        for file_path in files_to_process:
+            examples = self.process_jsonl_file(file_path, limit)
             all_examples.extend(examples)
-        
+            if limit and len(all_examples) >= limit:
+                all_examples = all_examples[:limit]
+                logger.info(f"Total processing limit of {limit} reached.")
+                break
+
         if not all_examples:
-            logger.error("No examples processed!")
+            logger.error("No valid examples could be processed.")
             return None
-        
-        # Create splits
+            
+        # Create train/val/test splits
         dataset_dict = self.create_training_splits(all_examples)
         
-        # Save processed dataset
+        # Save to disk
         output_path = self.processed_data_dir / f"processed_dataset_{self.model_name}"
-        dataset_dict.save_to_disk(str(output_path))
-        
-        # Save tokenizer
-        tokenizer_path = self.processed_data_dir / f"tokenizer_{self.model_name}"
-        self.tokenizer.save_pretrained(str(tokenizer_path))
-        
-        # Save processing stats
-        stats = {
-            "total_examples": len(all_examples),
-            "languages": list(set(ex["language"] for ex in all_examples)),
-            "avg_token_length": sum(ex["token_count"] for ex in all_examples) / len(all_examples),
-            "model_name": self.model_name,
-            "tokenizer_vocab_size": len(self.tokenizer)
-        }
-        
-        stats_file = self.processed_data_dir / "processing_stats.json"
-        with open(stats_file, 'w') as f:
-            json.dump(stats, f, indent=2)
-        
-        logger.info(f"Processing complete! Dataset saved to {output_path}")
-        logger.info(f"Statistics: {stats}")
+        try:
+            dataset_dict.save_to_disk(output_path)
+            logger.info(f"✅ Processed data saved to: {output_path}")
+        except Exception as e:
+            logger.error(f"Failed to save dataset: {e}")
         
         return dataset_dict
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Preprocess code datasets for training")
-    parser.add_argument("--raw-data-dir", type=str, help="Directory containing raw data files")
-    parser.add_argument("--processed-data-dir", type=str, help="Output directory for processed data")
-    parser.add_argument("--model-name", choices=["codeparrot", "codet5", "codegen", "gpt2"],
-                       default="codeparrot", help="Model type for tokenization")
-    parser.add_argument("--max-length", type=int, default=512, help="Maximum sequence length")
-    
+    """Main function to run preprocessing."""
+    parser = argparse.ArgumentParser(description="CopilotMini Data Preprocessing")
+    parser.add_argument(
+        "--model", 
+        type=str, 
+        default="codegen",
+        choices=["codeparrot", "codet5", "codegen"],
+        help="Model type to preprocess data for."
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit the number of lines to process for a quick test."
+    )
     args = parser.parse_args()
     
-    # Setup logging
-    logger.add("logs/data_preprocessing.log", rotation="10 MB")
+    logger.info(f"Starting preprocessing for model: {args.model}")
+
+    # Setup directories
+    raw_data_dir = Path(DATA_CONFIG["raw_data_dir"])
+    processed_data_dir = Path(DATA_CONFIG["processed_data_dir"])
     
-    # Initialize preprocessor
-    raw_dir = Path(args.raw_data_dir) if args.raw_data_dir else None
-    processed_dir = Path(args.processed_data_dir) if args.processed_data_dir else None
-    
+    # Check if raw data exists. If not, stop and warn the user.
+    if not any(raw_data_dir.iterdir()):
+        logger.error(f"Raw data not found in {raw_data_dir}.")
+        logger.error("Please run the `download_dataset.py` script first to download the data.")
+        return
+
     preprocessor = CodePreprocessor(
-        raw_data_dir=raw_dir,
-        processed_data_dir=processed_dir,
-        model_name=args.model_name
+        raw_data_dir=raw_data_dir,
+        processed_data_dir=processed_data_dir,
+        model_name=args.model
     )
     
-    # Process data
-    dataset = preprocessor.process_all_data()
+    dataset = preprocessor.process_all_data(limit=args.limit)
     
     if dataset:
-        logger.info("Data preprocessing completed successfully!")
-        
-        # Print dataset info
-        for split, data in dataset.items():
-            logger.info(f"{split}: {len(data)} examples")
+        logger.info("✅ Data preprocessing complete.")
+        logger.info(f"Sample record: {dataset['train'][0]}")
     else:
-        logger.error("Data preprocessing failed!")
+        logger.error("❌ Data preprocessing failed.")
 
 if __name__ == "__main__":
     main() 

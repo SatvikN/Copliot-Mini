@@ -1,0 +1,14 @@
+# Core ML and data libraries
+torch
+transformers
+datasets
+tqdm
+loguru
+pyyaml
+scikit-learn
+pandas
+
+# Code analysis
+pygments
+tree-sitter
+psutil 
