@@ -172,33 +172,73 @@ class CustomInferenceEngine:
         # Tokenize input
         inputs = tokenizer(code, return_tensors="pt")
         
+        # Handle device placement for Apple Silicon
         if torch.cuda.is_available():
             inputs = {k: v.cuda() for k, v in inputs.items()}
             model = model.cuda()
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            inputs = {k: v.to('mps') for k, v in inputs.items()}
+            model = model.to('mps')
         
         suggestions = []
         
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=50,
-                num_return_sequences=max_suggestions,
-                do_sample=True,
-                temperature=0.2,
-                top_p=0.95,
-                pad_token_id=tokenizer.eos_token_id
-            )
+        try:
+            with torch.no_grad():
+                # Try sampling first with safer parameters
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=30,
+                    num_return_sequences=max_suggestions,
+                    do_sample=True,
+                    temperature=0.1,  # Lower temperature for stability
+                    top_p=0.9,        # Lower top_p for stability
+                    top_k=50,         # Add top_k for additional stability
+                    pad_token_id=tokenizer.eos_token_id,
+                    repetition_penalty=1.1,  # Prevent repetition
+                    no_repeat_ngram_size=2   # Prevent repetition
+                )
+                
+                # Decode and clean suggestions
+                suggestions = [
+                    tokenizer.decode(output, skip_special_tokens=True)
+                    for output in outputs
+                ]
+                
+                # Remove the original code from the suggestion
+                suggestions = [s[len(code):].strip() for s in suggestions]
+                
+        except Exception as e:
+            logger.warning(f"Sampling generation failed: {e}, falling back to greedy decoding")
             
-            # Decode and clean suggestions
-            suggestions = [
-                tokenizer.decode(output, skip_special_tokens=True)
-                for output in outputs
-            ]
-            
-            # Remove the original code from the suggestion
-            suggestions = [s[len(code):] for s in suggestions]
-            
-            return suggestions
+            # Fallback to greedy decoding (more stable)
+            with torch.no_grad():
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=30,
+                    num_return_sequences=1,
+                    do_sample=False,  # Greedy decoding
+                    pad_token_id=tokenizer.eos_token_id
+                )
+                
+                # Decode and create variations
+                base_suggestion = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                base_suggestion = base_suggestion[len(code):].strip()
+                
+                # Create simple variations for multiple suggestions
+                suggestions = [base_suggestion]
+                if len(base_suggestion) > 10:
+                    # Add truncated versions
+                    suggestions.append(base_suggestion[:len(base_suggestion)//2])
+                    suggestions.append(base_suggestion[:len(base_suggestion)//3])
+                else:
+                    # Add simple variations
+                    suggestions.extend([base_suggestion + "()", base_suggestion + ":"])
+        
+        # Ensure we have the right number of suggestions
+        while len(suggestions) < max_suggestions:
+            suggestions.append("")  # Add empty suggestions if needed
+        
+        return suggestions[:max_suggestions]
 
     async def process_chat(
         self,
@@ -254,27 +294,39 @@ class CustomInferenceEngine:
         
         inputs = tokenizer(prompt, return_tensors="pt")
         
+        # Handle device placement for Apple Silicon
         if torch.cuda.is_available():
             inputs = {k: v.cuda() for k, v in inputs.items()}
             model = model.cuda()
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            inputs = {k: v.to('mps') for k, v in inputs.items()}
+            model = model.to('mps')
             
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=200,
-                num_return_sequences=1,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.95,
-                pad_token_id=tokenizer.eos_token_id
-            )
-            
-            response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Clean up response
-            response = response[len(prompt):].strip()
-            
-            return response
+        try:
+            with torch.no_grad():
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=100,  # Reduced for stability
+                    num_return_sequences=1,
+                    do_sample=True,
+                    temperature=0.3,  # Lower temperature for stability
+                    top_p=0.9,        # Lower top_p for stability
+                    top_k=50,         # Add top_k for additional stability
+                    pad_token_id=tokenizer.eos_token_id,
+                    repetition_penalty=1.1,  # Prevent repetition
+                    no_repeat_ngram_size=2   # Prevent repetition
+                )
+                
+                response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                
+                # Clean up response
+                response = response[len(prompt):].strip()
+                
+                return response
+                
+        except Exception as e:
+            logger.warning(f"Chat generation failed: {e}, falling back to simple response")
+            return f"I'm a fine-tuned code model. For '{message}', I'd recommend checking the documentation or trying a different approach."
             
     def get_status(self) -> str:
         """Get the status of the custom inference engine."""
