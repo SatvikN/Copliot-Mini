@@ -1,0 +1,83 @@
+2025-07-16 14:39:57.947 | INFO     | __main__:run_all_tests:174 - 🚀 Running CopilotMini training infrastructure tests...
+2025-07-16 14:39:57.947 | INFO     | __main__:run_all_tests:175 - ============================================================
+2025-07-16 14:39:57.947 | INFO     | __main__:run_all_tests:187 - 
+📋 Running Environment test...
+2025-07-16 14:39:57.947 | INFO     | __main__:test_environment:138 - 🧪 Testing training environment...
+2025-07-16 14:39:57.947 | INFO     | __main__:test_environment:145 - ✅ PyTorch version: 2.7.1
+2025-07-16 14:39:57.947 | INFO     | __main__:test_environment:146 - ✅ Transformers version: 4.53.2
+2025-07-16 14:39:57.947 | INFO     | __main__:test_environment:147 - ✅ CUDA available: False
+2025-07-16 14:39:57.947 | INFO     | __main__:test_environment:154 - 🔬 Testing basic operations...
+2025-07-16 14:40:00.557 | INFO     | __main__:test_environment:159 - ✅ Tokenizer loading works
+2025-07-16 14:40:00.560 | INFO     | __main__:test_environment:164 - ✅ Dataset creation works: 10 examples
+2025-07-16 14:40:00.565 | INFO     | __main__:run_all_tests:197 - ✅ Environment test PASSED
+2025-07-16 14:40:00.565 | INFO     | __main__:run_all_tests:187 - 
+📋 Running Training Configs test...
+2025-07-16 14:40:00.565 | INFO     | __main__:test_training_configs:105 - 🧪 Testing training configurations...
+2025-07-16 14:40:00.576 | INFO     | training.scripts.train_models:load_config:48 - Loaded config from: training/configs/codegen_config.yaml
+2025-07-16 14:40:00.576 | INFO     | __main__:test_training_configs:116 - ✅ codegen config loaded successfully
+2025-07-16 14:40:00.576 | INFO     | __main__:test_training_configs:124 -   • model: ✓
+2025-07-16 14:40:00.576 | INFO     | __main__:test_training_configs:124 -   • training: ✓
+2025-07-16 14:40:00.576 | INFO     | __main__:test_training_configs:124 -   • dataset: ✓
+2025-07-16 14:40:00.576 | INFO     | __main__:test_training_configs:129 - ✅ All configs loaded successfully!
+2025-07-16 14:40:00.576 | INFO     | __main__:run_all_tests:197 - ✅ Training Configs test PASSED
+2025-07-16 14:40:00.576 | INFO     | __main__:run_all_tests:187 - 
+📋 Running Custom Inference test...
+2025-07-16 14:40:00.576 | INFO     | __main__:test_custom_inference:68 - 🧪 Testing custom inference engine...
+2025-07-16 14:40:00.597 | INFO     | backend.models.custom_inference:initialize:44 - 🤖 Initializing custom inference engine...
+2025-07-16 14:40:00.597 | WARNING  | backend.models.custom_inference:initialize:51 - ⚠️ No trained CodeGen model found, cannot initialize custom inference
+2025-07-16 14:40:00.598 | INFO     | __main__:test_custom_inference:95 - ℹ️ No custom models found (expected if no training has been done)
+2025-07-16 14:40:00.598 | INFO     | __main__:run_all_tests:197 - ✅ Custom Inference test PASSED
+2025-07-16 14:40:00.598 | INFO     | __main__:run_all_tests:187 - 
+📋 Running CodeGen Training test...
+2025-07-16 14:40:00.598 | INFO     | __main__:test_codegen_training:21 - 🧪 Testing CodeGen training...
+2025-07-16 14:40:00.598 | INFO     | training.scripts.train_codegen:setup_model_and_tokenizer:56 - Loading CodeGen model: Salesforce/codegen-350M-mono
+2025-07-16 14:40:03.369 | INFO     | training.scripts.train_codegen:setup_model_and_tokenizer:99 - CodeGen model loaded with 354878593 parameters
+2025-07-16 14:40:03.369 | INFO     | __main__:test_codegen_training:32 - ✅ Model and tokenizer setup successful
+2025-07-16 14:40:03.369 | INFO     | training.scripts.train_codegen:load_dataset:103 - Loading dataset from: data/processed/processed_dataset_codegen
+2025-07-16 14:40:03.387 | INFO     | training.scripts.train_codegen:load_dataset:107 - Dataset loaded: DatasetDict({
+    train: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 13
+    })
+    validation: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 1
+    })
+    test: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 3
+    })
+})
+2025-07-16 14:40:03.387 | INFO     | training.scripts.train_codegen:load_dataset:111 - Dataset contains text fields, preprocessing for training...
+2025-07-16 14:40:03.387 | INFO     | training.scripts.train_codegen:_preprocess_dataset:129 - Preprocessing dataset for training...
+2025-07-16 14:40:03.387 | INFO     | training.scripts.train_codegen:_preprocess_dataset:167 - Processing train split...
+2025-07-16 14:40:05.647 | INFO     | training.scripts.train_codegen:_preprocess_dataset:167 - Processing validation split...
+2025-07-16 14:40:07.934 | INFO     | training.scripts.train_codegen:_preprocess_dataset:167 - Processing test split...
+2025-07-16 14:40:09.841 | INFO     | __main__:test_codegen_training:36 - ✅ Dataset loading successful
+2025-07-16 14:40:09.841 | INFO     | __main__:test_codegen_training:39 - 🏃‍♂️ Running minimal training test...
+2025-07-16 14:40:09.841 | INFO     | training.scripts.train_codegen:train:310 - Starting CodeGen fine-tuning...
+2025-07-16 14:40:09.841 | INFO     | training.scripts.train_codegen:setup_model_and_tokenizer:56 - Loading CodeGen model: Salesforce/codegen-350M-mono
+2025-07-16 14:40:12.536 | INFO     | training.scripts.train_codegen:setup_model_and_tokenizer:99 - CodeGen model loaded with 354878593 parameters
+2025-07-16 14:40:12.537 | INFO     | training.scripts.train_codegen:load_dataset:103 - Loading dataset from: data/processed/processed_dataset_codegen
+2025-07-16 14:40:12.548 | INFO     | training.scripts.train_codegen:load_dataset:107 - Dataset loaded: DatasetDict({
+    train: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 13
+    })
+    validation: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 1
+    })
+    test: Dataset({
+        features: ['text', 'language', 'input_ids', 'attention_mask', 'token_count', 'truncated'],
+        num_rows: 3
+    })
+})
+2025-07-16 14:40:12.549 | INFO     | training.scripts.train_codegen:load_dataset:111 - Dataset contains text fields, preprocessing for training...
+2025-07-16 14:40:12.549 | INFO     | training.scripts.train_codegen:_preprocess_dataset:129 - Preprocessing dataset for training...
+2025-07-16 14:40:12.549 | INFO     | training.scripts.train_codegen:_preprocess_dataset:167 - Processing train split...
+2025-07-16 14:40:14.135 | INFO     | training.scripts.train_codegen:_preprocess_dataset:167 - Processing validation split...
+2025-07-16 14:40:15.043 | INFO     | training.scripts.train_codegen:_preprocess_dataset:167 - Processing test split...
+2025-07-16 14:40:17.707 | INFO     | training.scripts.train_codegen:train:354 - Training started...
+2025-07-16 16:17:29.129 | INFO     | __main__:main:244 - 
+⏹️ Tests interrupted by user

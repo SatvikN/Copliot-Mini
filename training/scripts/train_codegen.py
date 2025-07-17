@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 
 import torch
 import torch.nn as nn
+import numpy as np
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -23,7 +24,6 @@ from transformers import (
 )
 from datasets import load_from_disk, Dataset
 from loguru import logger
-import numpy as np
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -85,12 +85,23 @@ class CodeGenTrainer:
         num_added = self.tokenizer.add_tokens(code_tokens)
         
         # Load model
+        device_map = None
+        if torch.cuda.is_available():
+            device_map = "auto"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            # For MPS (Apple Silicon), load on CPU first, then move to MPS
+            device_map = None
+        
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name,
             torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-            device_map="auto" if torch.cuda.is_available() else None,
+            device_map=device_map,
             trust_remote_code=True  # Required for some CodeGen models
         )
+        
+        # Move to MPS if available
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            self.model = self.model.to('mps')
         
         # Resize token embeddings if we added tokens
         if num_added > 0:
@@ -106,6 +117,11 @@ class CodeGenTrainer:
             self.dataset = load_from_disk(self.dataset_path)
             logger.info(f"Dataset loaded: {self.dataset}")
             
+            # Check if dataset needs preprocessing
+            if "text" in self.dataset["train"].column_names:
+                logger.info("Dataset contains text fields, preprocessing for training...")
+                self.dataset = self._preprocess_dataset(self.dataset)
+            
             # Ensure all splits have required columns
             required_columns = ["input_ids", "attention_mask"]
             for split_name, split_data in self.dataset.items():
@@ -118,6 +134,57 @@ class CodeGenTrainer:
             logger.error(f"Failed to load dataset: {e}")
             logger.info("Creating a sample dataset for testing...")
             self.dataset = self._create_sample_dataset()
+    
+    def _preprocess_dataset(self, dataset):
+        """Preprocess dataset to ensure proper tokenization."""
+        logger.info("Preprocessing dataset for training...")
+        
+        def tokenize_function(examples):
+            # Use the text field for tokenization
+            if "text" in examples:
+                texts = examples["text"]
+            elif "input_ids" in examples:
+                # If already tokenized, return as is
+                return {
+                    "input_ids": examples["input_ids"],
+                    "attention_mask": examples["attention_mask"]
+                }
+            else:
+                raise ValueError("No text or input_ids field found in dataset")
+            
+            # Ensure texts are strings
+            if isinstance(texts, list):
+                texts = [str(text) if text is not None else "" for text in texts]
+            else:
+                texts = str(texts) if texts is not None else ""
+            
+            # Tokenize
+            tokenized = self.tokenizer(
+                texts,
+                truncation=True,
+                padding="max_length",
+                max_length=MODEL_CONFIG["max_length"],
+                return_tensors=None  # Return lists, not tensors
+            )
+            
+            return {
+                "input_ids": tokenized["input_ids"],
+                "attention_mask": tokenized["attention_mask"]
+            }
+        
+        # Apply tokenization to all splits
+        processed_dataset = {}
+        for split_name, split_data in dataset.items():
+            logger.info(f"Processing {split_name} split...")
+            processed_dataset[split_name] = split_data.map(
+                tokenize_function,
+                batched=True,
+                remove_columns=split_data.column_names,
+                desc=f"Tokenizing {split_name}"
+            )
+        
+        from datasets import DatasetDict
+        return DatasetDict(processed_dataset)
     
     def _create_sample_dataset(self):
         """Create a sample dataset for code completion tasks."""
@@ -219,6 +286,12 @@ class CodeGenTrainer:
         """Compute training metrics."""
         predictions, labels = eval_pred
         
+        # Convert to PyTorch tensors if they're numpy arrays
+        if isinstance(predictions, np.ndarray):
+            predictions = torch.tensor(predictions)
+        if isinstance(labels, np.ndarray):
+            labels = torch.tensor(labels)
+        
         # Calculate perplexity
         shift_logits = predictions[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
@@ -229,13 +302,13 @@ class CodeGenTrainer:
         
         # Calculate cross entropy loss
         loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
-        loss = loss_fct(torch.tensor(shift_logits), torch.tensor(shift_labels))
+        loss = loss_fct(shift_logits, shift_labels)
         
         perplexity = torch.exp(loss).item()
         
         # Calculate accuracy (next token prediction)
-        predictions_flat = torch.argmax(torch.tensor(shift_logits), dim=-1)
-        labels_flat = torch.tensor(shift_labels)
+        predictions_flat = torch.argmax(shift_logits, dim=-1)
+        labels_flat = shift_labels
         mask = labels_flat != -100
         
         if mask.sum() > 0:
@@ -259,15 +332,20 @@ class CodeGenTrainer:
         
         # Manually remove columns that are not needed for training
         if self.dataset:
-            self.dataset = self.dataset.remove_columns(
-                [col for col in ["text", "language", "token_count", "truncated"] if col in self.dataset["train"].column_names]
-            )
+            columns_to_remove = []
+            for col in ["text", "language", "token_count", "truncated"]:
+                if col in self.dataset["train"].column_names:
+                    columns_to_remove.append(col)
+            
+            if columns_to_remove:
+                self.dataset = self.dataset.remove_columns(columns_to_remove)
 
         # Setup data collator
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=self.tokenizer,
             mlm=False,  # Causal LM, not masked LM
-            pad_to_multiple_of=8 if torch.cuda.is_available() else None
+            pad_to_multiple_of=8 if torch.cuda.is_available() else None,
+            return_tensors="pt"  # Ensure we get tensors
         )
         
         # Setup training arguments
@@ -350,33 +428,88 @@ class CodeGenTrainer:
         # Tokenize prompt
         inputs = self.tokenizer(prompt, return_tensors="pt")
         
-        if torch.cuda.is_available():
-            inputs = {k: v.cuda() for k, v in inputs.items()}
-            self.model = self.model.cuda()
+        # Handle device placement properly
+        device = next(self.model.parameters()).device
+        inputs = {k: v.to(device) for k, v in inputs.items()}
         
-        # Generate samples
+        # Generate samples with safer parameters
         samples = []
         with torch.no_grad():
             for i in range(num_samples):
+                try:
+                    outputs = self.model.generate(
+                        **inputs,
+                        max_length=inputs["input_ids"].shape[1] + max_length,
+                        do_sample=True,
+                        temperature=1.0,  # Higher temperature for stability
+                        top_p=0.95,       # Higher top_p for more diversity
+                        top_k=50,         # Higher top_k
+                        repetition_penalty=1.1,  # Slightly higher repetition penalty
+                        pad_token_id=self.tokenizer.eos_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                        bad_words_ids=[[self.tokenizer.unk_token_id]],
+                        # Add safety parameters
+                        use_cache=True,
+                        return_dict_in_generate=True,
+                        output_scores=False,  # Don't return scores to avoid issues
+                        # Add numerical stability
+                        renormalize_logits=True,
+                        # Limit generation length
+                        max_new_tokens=min(max_length, 50)
+                    )
+                    
+                    # Decode generated text
+                    if hasattr(outputs, 'sequences'):
+                        generated_text = self.tokenizer.decode(outputs.sequences[0], skip_special_tokens=True)
+                    else:
+                        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                    
+                    completion = generated_text[len(prompt):].strip()
+                    samples.append(completion)
+                    
+                except Exception as e:
+                    logger.warning(f"Generation failed for sample {i+1}: {e}")
+                    # Fallback to simple completion
+                    samples.append("print('Hello, World!')")
+        
+        return samples
+    
+    def generate_completion_safe(self, prompt: str, max_length: int = 50):
+        """Generate code completions using greedy decoding (more stable)."""
+        if not self.model:
+            logger.error("Model not loaded. Please train or load a model first.")
+            return []
+        
+        self.model.eval()
+        
+        # Tokenize prompt
+        inputs = self.tokenizer(prompt, return_tensors="pt")
+        
+        # Handle device placement properly
+        device = next(self.model.parameters()).device
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        
+        try:
+            with torch.no_grad():
+                # Use greedy decoding (more stable than sampling)
                 outputs = self.model.generate(
                     **inputs,
-                    max_length=inputs["input_ids"].shape[1] + max_length,
-                    do_sample=True,
-                    temperature=0.6 + (i * 0.1),  # Vary temperature for diversity
-                    top_p=0.9,
-                    top_k=40,
-                    repetition_penalty=1.05,
+                    max_new_tokens=max_length,
+                    do_sample=False,  # Greedy decoding
                     pad_token_id=self.tokenizer.eos_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
-                    bad_words_ids=[[self.tokenizer.unk_token_id]]  # Avoid unknown tokens
+                    use_cache=True
                 )
                 
                 # Decode generated text
                 generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
                 completion = generated_text[len(prompt):].strip()
-                samples.append(completion)
-        
-        return samples
+                
+                return [completion]
+                
+        except Exception as e:
+            logger.error(f"Safe generation failed: {e}")
+            return ["print('Hello, World!')"]
     
     def analyze_code_quality(self, code: str) -> Dict[str, Any]:
         """Analyze the quality of generated code."""

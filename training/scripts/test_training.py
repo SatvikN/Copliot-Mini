@@ -1,6 +1,6 @@
 """
 Quick test script to verify the training infrastructure works correctly.
-Tests a small CodeParrot model with minimal data for rapid validation.
+Tests a small CodeGen model with minimal data for rapid validation.
 """
 
 import os
@@ -13,18 +13,18 @@ from loguru import logger
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 # Import trainers
-from training.scripts.train_codeparrot import CodeParrotTrainer
+from training.scripts.train_codegen import CodeGenTrainer
 from training.scripts.train_models import ModelTrainingOrchestrator
 
-async def test_codeparrot_training():
-    """Test CodeParrot training with minimal setup."""
-    logger.info("🧪 Testing CodeParrot training...")
+async def test_codegen_training():
+    """Test CodeGen training with minimal setup."""
+    logger.info("🧪 Testing CodeGen training...")
     
     try:
         # Initialize trainer with small model
-        trainer = CodeParrotTrainer(
-            model_name="codeparrot/codeparrot-small",
-            output_dir="training/checkpoints/test_codeparrot",
+        trainer = CodeGenTrainer(
+            model_name="Salesforce/codegen-350M-mono",
+            output_dir="training/checkpoints/test_codegen",
         )
         
         # Test model and tokenizer setup
@@ -53,7 +53,7 @@ async def test_codeparrot_training():
         
         # Test generation
         logger.info("🎨 Testing code generation...")
-        samples = trainer.generate_sample("def hello_world():", max_length=50, num_samples=2)
+        samples = trainer.generate_completion("def hello_world():", max_length=50, num_samples=2)
         logger.info(f"Generated samples: {samples}")
         logger.info("✅ Generation test successful!")
         
@@ -178,7 +178,7 @@ async def run_all_tests():
         ("Environment", test_environment),
         ("Training Configs", test_training_configs),
         ("Custom Inference", test_custom_inference),
-        ("CodeParrot Training", test_codeparrot_training),
+        ("CodeGen Training", test_codegen_training),
     ]
     
     results = {}
@@ -234,7 +234,7 @@ def main():
         
         if success:
             logger.info("\n🎯 Ready to start training! Run:")
-            logger.info("  python training/scripts/train_models.py --models codeparrot")
+            logger.info("  python training/scripts/train_models.py --models codegen")
             sys.exit(0)
         else:
             logger.error("\n❌ Tests failed. Fix issues before training.")
