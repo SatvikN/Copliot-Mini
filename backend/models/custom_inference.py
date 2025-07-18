@@ -82,36 +82,32 @@ class CustomInferenceEngine:
         return None
     
     async def _load_model(self, model_info: Dict[str, Any]) -> bool:
-        """Load a specific trained model."""
         model_type = model_info["model_type"]
         model_path = model_info["path"]
-        
+
         logger.info(f"Loading {model_type} model from {model_path}")
-        
+
         try:
-            # Get model configuration
             model_config = self.model_types[model_type]
-            
-            # Load tokenizer
             tokenizer_class = model_config["tokenizer_class"]
             tokenizer = tokenizer_class.from_pretrained(model_path)
-            
-            # Load model
+
             model_class = model_config["model_class"]
+            print("About to load model...")
             model = model_class.from_pretrained(
                 model_path,
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                device_map="auto" if torch.cuda.is_available() else None
+                torch_dtype=torch.float32,
+                device_map=None
             )
-            
-            # Store model and tokenizer
+            print("Model loaded!")
+
             self.models[model_type] = model
             self.tokenizers[model_type] = tokenizer
             self.model_configs[model_type] = model_config
-            
+
             logger.info(f"✅ Successfully loaded {model_type} model")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to load {model_type} model: {e}")
             return False
@@ -137,9 +133,11 @@ class CustomInferenceEngine:
             model = self.models[selected_model]
             tokenizer = self.tokenizers[selected_model]
             
+            print(f"[DEBUG] Prompt sent to model:\n{code}\n---")
             suggestions = await self._generate_causal_completions(
                 model, tokenizer, code, max_suggestions
             )
+            print(f"[DEBUG] Model suggestions: {suggestions}")
             
             processing_time = (time.time() - start_time) * 1000  # Convert to ms
             
@@ -206,7 +204,7 @@ class CustomInferenceEngine:
                 
                 # Remove the original code from the suggestion
                 suggestions = [s[len(code):].strip() for s in suggestions]
-                
+            print(f"[DEBUG] Raw model outputs: {suggestions}")
         except Exception as e:
             logger.warning(f"Sampling generation failed: {e}, falling back to greedy decoding")
             
@@ -233,6 +231,7 @@ class CustomInferenceEngine:
                 else:
                     # Add simple variations
                     suggestions.extend([base_suggestion + "()", base_suggestion + ":"])
+            print(f"[DEBUG] Greedy model outputs: {suggestions}")
         
         # Ensure we have the right number of suggestions
         while len(suggestions) < max_suggestions:

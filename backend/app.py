@@ -24,6 +24,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from config import API_CONFIG, LOGGING_CONFIG
 from backend.models.inference import MockInferenceEngine
 from backend.utils.connection_manager import ConnectionManager
+from backend.rag.retriever import RAGRetriever
 
 # Import real AI engine
 try:
@@ -32,7 +33,7 @@ try:
 except ImportError as e:
     REAL_AI_AVAILABLE = False
     RealInferenceEngine = None
-    logger.info(f"Real AI not available: {e}")
+    logger.info(f"External AI API not available: {e}")
 
 # Import custom AI engine
 try:
@@ -42,6 +43,9 @@ except ImportError as e:
     CUSTOM_AI_AVAILABLE = False
     CustomInferenceEngine = None
     logger.info(f"Custom AI not available: {e}")
+
+# Initialize RAG retriever (adjust path if needed)
+rag_retriever = RAGRetriever()
 
 # Configure logging
 logger.add(
@@ -152,25 +156,26 @@ async def complete_code(request: CodeCompletionRequest):
     """Generate code completions for the given input."""
     try:
         start_time = asyncio.get_event_loop().time()
-        
+        # RAG: Retrieve relevant context
+        rag_results = rag_retriever.retrieve(request.code, top_k=3)
+        rag_context = '\n\n'.join([r['text'] for r in rag_results])
+        # Prepend RAG context to code
+        code_with_context = f"# Relevant context from project:\n{rag_context}\n\n{request.code}"
         # Generate completions using inference engine
         result = await inference_engine.generate_completions(
-            code=request.code,
+            code=code_with_context,
             language=request.language,
             max_suggestions=request.max_suggestions or 3,
             cursor_position=request.cursor_position
         )
-        
         end_time = asyncio.get_event_loop().time()
         processing_time = (end_time - start_time) * 1000  # Convert to milliseconds
-        
         return CodeCompletionResponse(
             suggestions=result["suggestions"],
             confidence_scores=result["confidence_scores"],
             processing_time_ms=processing_time,
             model_used=result["model_used"]
         )
-        
     except Exception as e:
         logger.error(f"Error in code completion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -180,23 +185,27 @@ async def chat_with_ai(request: ChatRequest):
     """Chat with AI about code."""
     try:
         start_time = asyncio.get_event_loop().time()
-        
+        # RAG: Retrieve relevant context
+        rag_results = rag_retriever.retrieve(request.message, top_k=3)
+        rag_context = '\n\n'.join([r['text'] for r in rag_results])
+        # Prepend RAG context to code_context if present, else just use RAG
+        if request.code_context:
+            code_context_with_rag = f"# Relevant context from project:\n{rag_context}\n\n{request.code_context}"
+        else:
+            code_context_with_rag = f"# Relevant context from project:\n{rag_context}"
         # Process chat request
         result = await inference_engine.process_chat(
             message=request.message,
-            code_context=request.code_context,
+            code_context=code_context_with_rag,
             language=request.language
         )
-        
         end_time = asyncio.get_event_loop().time()
         processing_time = (end_time - start_time) * 1000
-        
         return ChatResponse(
             response=result["response"],
             code_suggestions=result.get("code_suggestions"),
             processing_time_ms=processing_time
         )
-        
     except Exception as e:
         logger.error(f"Error in chat processing: {e}")
         raise HTTPException(status_code=500, detail=str(e))

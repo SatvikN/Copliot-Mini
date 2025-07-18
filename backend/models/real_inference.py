@@ -170,7 +170,7 @@ class RealInferenceEngine:
             return await self._fallback_mock_completion(code, language, num_suggestions)
     
     async def _openai_completion(self, code: str, language: str, num_suggestions: int) -> List[Dict[str, Any]]:
-        """Generate completions using OpenAI GPT-4"""
+        """Generate completions using OpenAI GPT-4. The 'code' argument may already include RAG context prepended."""
         
         # Create a focused prompt for code completion
         prompt = f"""You are an expert {language} programmer. Complete the following code with {num_suggestions} different suggestions.
@@ -212,7 +212,7 @@ Complete this code with the most likely continuation:"""
         return suggestions
     
     async def _ollama_completion(self, code: str, language: str, num_suggestions: int) -> List[Dict[str, Any]]:
-        """Generate completions using Ollama local models"""
+        """Generate completions using Ollama local models. The 'code' argument may already include RAG context prepended."""
         import aiohttp
         
         prompt = f"Complete this {language} code:\n{code}"
@@ -245,7 +245,7 @@ Complete this code with the most likely continuation:"""
         return suggestions
     
     async def _huggingface_completion(self, code: str, language: str, num_suggestions: int) -> List[Dict[str, Any]]:
-        """Generate completions using HuggingFace models"""
+        """Generate completions using HuggingFace models. The 'code' argument may already include RAG context prepended."""
         import torch
         
         # Prepare input
