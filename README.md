@@ -1,6 +1,6 @@
 # CopilotMini - GitHub Copilot Clone
 
-A comprehensive GitHub Copilot clone featuring a fine-tuned code generation model, RAG-enhanced completions, and VSCode integration.
+A GitHub Copilot clone featuring a fine-tuned code generation model, RAG-enhanced completions, and VSCode integration.
 
 ## 🎯 Features
 
@@ -124,55 +124,7 @@ CopilotMini/
   ```
   The backend will load your model and use it for completions and chat. If not set, the backend will use a mock engine or external AI if available.
 
-- **Troubleshooting**:
-  - If the backend hangs on startup, it may be loading a large model. Wait several minutes.
-  - If you see `External AI API not available`, it means OpenAI or other external APIs are not configured, but your custom model will still work.
-  - If the extension cannot connect, ensure the backend is running and the WebSocket URL matches the backend port (default: 8000).
-  - To test model loading, try loading your model in a Python shell:
-    ```python
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    model = AutoModelForCausalLM.from_pretrained("training/checkpoints/codegen")
-    tokenizer = AutoTokenizer.from_pretrained("training/checkpoints/codegen")
-    ```
-
 - **Updating the RAG index**: Re-run the indexer script any time you change your codebase or documentation to keep completions project-aware.
-
-## 🔧 Development Phases
-
-- [x] **Phase 1**: Dataset and Preprocessing
-- [x] **Phase 2**: Fine-tune Code Model  
-- [x] **Phase 3**: Inference Server (LLM + RAG)
-- [x] **Phase 4**: VSCode Extension
-- [ ] **Phase 5**: Chat Mode (Optional)
-- [ ] **Phase 6**: Error Fix Mode (Optional)
-- [ ] **Phase 7**: Deployment and Testing
-
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Code Model | CodeParrot / CodeT5 / CodeGen |
-| RAG Retriever | FAISS or ChromaDB |
-| Embeddings | codeBERT, intfloat/e5-code |
-| Server | Flask/FastAPI with WebSocket |
-| Extension | VSCode with TypeScript |
-| Hosting | Render / EC2 / GCP |
-
-## 📊 Model Performance
-
-*Performance metrics will be added after training completion*
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📝 License
-
-MIT License - see LICENSE file for details
 
 ## 🔗 Links
 
