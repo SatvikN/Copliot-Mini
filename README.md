@@ -71,6 +71,10 @@ CopilotMini/
    pip install -r requirements.txt
    cd ..
    ```
+   description of the 3 requirements files:
+   - requirements-minimal.txt for development and lightweight usage
+   - requirements.txt for full production or to use all features locally
+   - requirements-ai.txt to enable real AI models (OpenAI, Ollama, HuggingFace, etc.)
 
 3. **Set up VSCode extension**
    ```bash

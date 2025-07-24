@@ -18,6 +18,3 @@ pytest>=7.4.0
 
 # Code Processing (essential)
 pygments>=2.16.0
-
-# Note: Run this first with: pip install -r requirements-minimal.txt
-# Then gradually add larger dependencies as needed 
