@@ -114,7 +114,7 @@ CopilotMini/
      -d '{"code": "def fibonacci(n):", "language": "python"}'
    ```
 
-## 🧠 RAG & Custom Model Usage
+## RAG & Custom Model Usage
 
 - **RAG Indexing**: The backend uses a persistent FAISS index to retrieve relevant code and documentation chunks for every request. To rebuild the index (e.g., after changing your codebase or docs):
   ```bash
