@@ -93,7 +93,7 @@ def test_dataset_loading():
             logger.info(f"   Columns: {trainer.dataset['train'].column_names}")
             return True
         else:
-            logger.error("❌ Dataset is None")
+            logger.error("❌ Dataset doesn't exist")
             return False
         
     except Exception as e:
