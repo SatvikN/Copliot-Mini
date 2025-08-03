@@ -11,7 +11,7 @@ A GitHub Copilot clone featuring a fine-tuned code generation model, RAG-enhance
 - **Error Autofix**: Automatic detection and fixing of coding errors
 - **Project-Aware**: Context-aware completions based on your codebase
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -130,7 +130,7 @@ CopilotMini/
 
 - **Updating the RAG index**: Re-run the indexer script any time you change your codebase or documentation to keep completions project-aware.
 
-## 🔗 Links
+## Links
 
 - [Documentation](./docs/)
 - [API Reference](./docs/api.md)
