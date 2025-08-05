@@ -152,7 +152,7 @@ def test_training_setup():
 
 def main():
     """Run all debug tests."""
-    logger.info("🔍 Starting training pipeline debug...")
+    logger.info("Starting training pipeline debugging...")
     logger.info("=" * 50)
     
     tests = [
