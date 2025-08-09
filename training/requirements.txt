@@ -1,4 +1,4 @@
-# Core ML and data libraries
+# ML and data libraries
 torch
 transformers
 datasets
